@@ -9,24 +9,22 @@
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 
+#define I2CDRV_LINUX_BUS0 "/dev/i2c-0"
+#define I2CDRV_LINUX_BUS1 "/dev/i2c-1"
+#define I2CDRV_LINUX_BUS2 "/dev/i2c-2"
+
 #define I2C_DEVICE_ADDRESS 0x20
 
-// Port 0 register address
-// Direction register: control the of the data I/O. 
-// When the bit is set, the corresponding pin will become an input. When a bit is clear, the pin will be an output
-#define REG_DIRA 0x00 
+#define REG_DIRA 0x00
 #define REG_DIRB 0x01
-
-// Output latch register OLAT: povide access to output latches
-// A read from this register results in a read of the OLAT and not the port itself
-// A write to this register modifies the output latches that modifies the pins configured as outputs
 #define REG_OUTA 0x14
 #define REG_OUTB 0x15
-
-#define I2CDRV_LINUX_BUS0 "dev/i2c-0"
-#define I2CDRV_LINUX_BUS1 "dev/i2c-1"
-#define I2CDRV_LINUX_BUS2 "dev/i2c-2"
-
+#define GPIO_EXPORT_FILE "/sys/class/gpio/export"
+#define LEFT_DIGIT_DIR "/sys/class/gpio/gpio61/direction"
+#define LEFT_DIGIT_VALUE "/sys/class/gpio/gpio61/value"
+#define RIGHT_DIGIT_DIR "/sys/class/gpio/gpio44/direction"
+#define RIGHT_DIGIT_VALUE "/sys/class/gpio/gpio44/value"
+int i2cFileDesc;
 void setupI2C()
 {
     //Config pin
@@ -42,13 +40,19 @@ void setupI2C()
 
 static int initI2cBus(char* bus, int address)
 {
-    int i2cFileDesc = open(bus, O_RDWR); //o_RDWR: read and write
-    int result = ioctl(i2cFileDesc, I2C_SLAVE, address);
-    if (result <0){
-        perror("I2C: Unable to set I2C device to slave address");
-        exit(1);
-    }
-    return i2cFileDesc;
+    i2cFileDesc = open(bus, O_RDWR);
+  if (i2cFileDesc < 0) {
+    printf("I2C DRV: Unable to open bus for read/write (%s)\n", bus);
+    perror("Error is:");
+    exit(-1);
+  }
+
+  int result = ioctl(i2cFileDesc, I2C_SLAVE, address);
+  if (result < 0) {
+    perror("Unable to set I2C device to slave address.");
+    exit(-1);
+  }
+  return i2cFileDesc;
 }
 
 //write a register
@@ -87,15 +91,15 @@ int main()
 {
     printf("Drive display (assume GPIO #61 and #44 are output and 1)\n");
     setupI2C();
-    int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
+    i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
 
      writeI2cReg(i2cFileDesc, REG_DIRA, 0x00); // cconfigure GPIO as output
     writeI2cReg(i2cFileDesc, REG_DIRB, 0x00);
 
     //drive an hour-glass looking character
     // Like an X with a bar on top & bottom
-    writeI2cReg(i2cFileDesc, REG_DIRA, 0x2A); // cconfigure GPIO as output
-    writeI2cReg(i2cFileDesc, REG_DIRB, 0x54);
+    writeI2cReg(i2cFileDesc, REG_OUTA, 0x2A); // cconfigure GPIO as output
+    writeI2cReg(i2cFileDesc, REG_OUTB, 0x54);
 
     //read a register
     unsigned char regVal = readI2cReg(i2cFileDesc, REG_OUTA);
