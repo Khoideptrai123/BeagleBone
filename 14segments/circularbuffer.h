@@ -23,6 +23,8 @@ void circular_buf_reset();
 /// Requires: me is valid and created by circular_buf_init
 void circular_buf_put(circular_buf_t* cbuf, double data);
 
+//Thread safe version of put
+int circular_buf_try_put(circular_buf_t* me, double data);
 
 
 /// Retrieve a value from the buffer
@@ -63,9 +65,23 @@ int circular_buf_getCount(circular_buf_t* cbuf);
 
 void circular_buf_setCapacity(circular_buf_t* cbuf, int newSize);
 
-double* circular_buf_returnBuf(circular_buf_t* cbuf, int length);
+double* circular_buf_returnBuf(circular_buf_t* cbuf, double *arr);
 
+/*
+Resize the circular buffer array. If new size < current size,
+remove oldests items from the array
+input: *struct, int
+output: void
+*/
+void resizeBuffer(circular_buf_t *cbuf, int newSize);
 
+/*
+Prints items from oldes to newst in CircularBuffer. Skips items based
+on argument
+input: struct, int
+output: void
+*/
+void displayBuffer(circular_buf_t *buffer, int skip);
 
 
 #endif

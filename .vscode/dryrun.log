@@ -1,0 +1,6 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/duykhoin/cmpt433/work/myApps/A2/BeagleBone'
+make: Leaving directory '/home/duykhoin/cmpt433/work/myApps/A2/BeagleBone'
+ 
+make: *** No targets specified and no makefile found.  Stop.
+

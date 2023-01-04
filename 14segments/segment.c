@@ -31,23 +31,11 @@ static long SECOND = 0;
 static long NANOSECOND = 8000000;
 
 static bool isSegmentRunning = true;
-static int ARR_NUM = 0;
+
 
 static pthread_t thread;
 pthread_mutex_t arrNumMutex = PTHREAD_MUTEX_INITIALIZER;
-
-void setupI2C()
-{
-    //Config pin
-    system("config-pin P9_18 i2c");
-    system("config-pin P9_17 i2c");
-    //Config GPIO
-    system("echo 61 > /sys/class/gpio/export");
-    system("echo 44 > /sys/class/gpio/export");
-    system("echo out > /sys/class/gpio/gpio61/direction");
-    system("echo out > /sys/class/gpio/gpio44/direction");
-}
-
+static int i2CFileDesc;
 
 static int initI2cBus(char* bus, int address)
 {
@@ -71,6 +59,7 @@ static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char va
         perror("I2C: Unable to write i2c register");
         exit(1);
     }
+    return;
 }
 
 //read a register
@@ -109,6 +98,26 @@ void GPIO_write(char *filename, char *value){
     fclose(pDigitFile);
 }
 
+void setupI2C()
+{
+    //Config pin
+    system("config-pin P9_18 i2c");
+    system("config-pin P9_17 i2c");
+    //Config GPIO
+    system("echo 61 > /sys/class/gpio/export");
+    system("echo 44 > /sys/class/gpio/export");
+    system("echo out > /sys/class/gpio/gpio61/direction");
+    system("echo out > /sys/class/gpio/gpio44/direction");
+
+    //initialize i2C
+    int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
+
+    writeI2cReg(i2cFileDesc, REG_DIRA, 0x00); // cconfigure GPIO as output
+    writeI2cReg(i2cFileDesc, REG_DIRB, 0x00);
+
+
+}
+
 void delay(long DELAY_SECOND, long DELAY_NANOSECOND){
     struct timespec reqDelay = {DELAY_SECOND, DELAY_NANOSECOND};
     nanosleep(&reqDelay, (struct timespec *)NULL);
@@ -132,7 +141,7 @@ void displaySingleDigit(int num){
     //this function will display both segments with same number
     int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
 
-    writeI2cReg(i2cFileDesc, REG_DIRA, 0x00); // cconfigure GPIO as output
+    writeI2cReg(i2cFileDesc, REG_DIRA, 0x00); // configure GPIO as output
     writeI2cReg(i2cFileDesc, REG_DIRB, 0x00);
 
     //Reset Display
@@ -144,26 +153,26 @@ void displaySingleDigit(int num){
     {
     case 0:
         writeI2cReg(i2cFileDesc, REG_OUTB, 0x86);
-        writeI2cReg(i2cFileDesc, REG_OUTA, 0xa1);
+        writeI2cReg(i2cFileDesc, REG_OUTA, 0xA1);
         break;
     case 1:
-        writeI2cReg(i2cFileDesc, REG_OUTB, 0x2);
+        writeI2cReg(i2cFileDesc, REG_OUTB, 0x12);
         writeI2cReg(i2cFileDesc, REG_OUTA, 0x80);
         break;
     case 2:
-        writeI2cReg(i2cFileDesc, REG_OUTB, 0xe);
+        writeI2cReg(i2cFileDesc, REG_OUTB, 0x0F);
         writeI2cReg(i2cFileDesc, REG_OUTA, 0x31);
         break;
     case 3:
-        writeI2cReg(i2cFileDesc, REG_OUTB, 0x6);
-        writeI2cReg(i2cFileDesc, REG_OUTA, 0xb0);
+        writeI2cReg(i2cFileDesc, REG_OUTB, 0x06);
+        writeI2cReg(i2cFileDesc, REG_OUTA, 0xB0);
         break;
     case 4:
-        writeI2cReg(i2cFileDesc, REG_OUTB, 0x8a);
+        writeI2cReg(i2cFileDesc, REG_OUTB, 0x8A);
         writeI2cReg(i2cFileDesc, REG_OUTA, 0x90);
         break;
     case 5:
-        writeI2cReg(i2cFileDesc, REG_OUTB, 0x8c);
+        writeI2cReg(i2cFileDesc, REG_OUTB, 0x8C);
         writeI2cReg(i2cFileDesc, REG_OUTA, 0xb0);
         break;
     case 6:
@@ -171,8 +180,8 @@ void displaySingleDigit(int num){
         writeI2cReg(i2cFileDesc, REG_OUTA, 0xb1);
         break;
     case 7:
-        writeI2cReg(i2cFileDesc, REG_OUTB, 0x15);
-        writeI2cReg(i2cFileDesc, REG_OUTA, 0x4);
+        writeI2cReg(i2cFileDesc, REG_OUTB, 0x14);
+        writeI2cReg(i2cFileDesc, REG_OUTA, 0x04);
         break;
     case 8:
         writeI2cReg(i2cFileDesc, REG_OUTB, 0x8e);
@@ -216,14 +225,16 @@ void displayNumberViaI2C(int num)
 
 void i2c_startDisplay(){
     setupI2C();
-    
+    printf("Start thread 5 \n");
     pthread_create(&thread, NULL, i2c_display_thread, NULL);
 }
-void* i2c_display_thread(){
-    for (int i = 0; i <100; i++){
+void* i2c_display_thread(int i){
+    while(isSegmentRunning){
         displayNumberViaI2C(i);
-        delay(1,0); //delay 1s
+        //delay(0,1000000); //delay 1s
     }
+    i2c_stopDisplay();
+    
     return NULL;
 }
 void i2c_stopDisplay(){

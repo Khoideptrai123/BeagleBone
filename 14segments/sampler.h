@@ -21,7 +21,7 @@ int Sampler_getHistorySize(void);
 // The calling code must call free() on the returned pointer
 // Note: privde both data and size to ensure consistency
 
-double* Sampler_getHistory(int length);
+double* Sampler_getHistory(int* length);
 
 //Return how many samples are currently in the history
 // may be less than the history size of the history is not yet full
@@ -32,6 +32,10 @@ double Sampler_getAverageReading(void);
 
 //Get the total number of light level taken so far.
 long long Sampler_getNumSamplesTaken(void);
+
+//Print the element of the array, with given size
+void printArray(double* arr, int size);
+
 
 
 
